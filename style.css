@@ -46,6 +46,9 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-off
 .cover{display:flex;flex-direction:column;gap:16px;padding-block:12px 18px;border-bottom:2px solid var(--ink);position:relative}
 .cover .meta{display:flex;gap:8px 18px;flex-wrap:wrap}
 .cover-stamp{position:absolute;right:0;top:4px;width:64px;height:64px;border:3px solid var(--stamp);border-radius:50%;color:var(--stamp);display:grid;place-items:center;font-weight:800;font-size:30px;transform:rotate(-10deg)}
+.name-field{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:14px}
+.name-field input{font:inherit;font-size:16px;font-weight:400;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 14px;width:100%;max-width:320px}
+.name-field input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
 .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
 .mode{text-align:left;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:6px;transition:border-color .15s}
 @media (hover:hover){.mode:hover{border-color:var(--accent)}}

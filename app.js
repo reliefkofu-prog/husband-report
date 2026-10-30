@@ -4,7 +4,10 @@
 const C = window.REPORT;
 const CATS = C.categories, Q = C.questions, MODES = C.modes;
 // 上位％の目安に使う仮の分布。全国の分布データがないため。値を変えるときは画面の注記も直すこと
-const DIST = { mean: 50, sd: 15 };
+const DIST = { mean: 70, sd: 10 };
+// 点数の底上げ：観点の点数＝配点×（取得点÷満点）^CURVE。0.48 は「1問あたり平均1.5点（真ん中）の人」が約70点になる値
+// （ランダム回答10万回で平均70.0点。全部0点→0点、全部3点→100点は変わらない）
+const CURVE = 0.48;
 const KEY = "husband-report-v2";
 const RULE = "━".repeat(23);
 const app = document.getElementById("app");
@@ -19,7 +22,10 @@ function save(o) { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (
 
 /* ---------- 小さな道具 ---------- */
 const other = m => (m === "h" ? "w" : "h");
-const fmt = (t, m) => t.replaceAll("{s}", MODES[m].s).replaceAll("{w}", MODES[m].w);
+// 夫の名前（任意・10文字まで）。妻が答えるときは「夫は」を「◯◯さんは」にする。表示は必ず esc を通す
+const cleanName = s => String(s || "").replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 10);
+const titleOf = n => (n ? `${n}さんの通知表` : C.appName);
+const fmt = (t, m, n) => t.replaceAll("{s}", m === "w" && n ? `${n}さん` : MODES[m].s).replaceAll("{w}", MODES[m].w);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const r1 = v => Math.round(v * 10) / 10;
 const encode = pts => pts.map(p => (p == null ? "-" : p)).join("");
@@ -45,7 +51,7 @@ function compute(pts) {
   const cats = CATS.map(c => {
     const idx = Q.map((q, i) => (q.cat === c.id ? i : -1)).filter(i => i >= 0);
     const raw = idx.reduce((a, i) => a + pts[i], 0), max = idx.length * 3;
-    return { ...c, raw, max, pts: max ? c.points * raw / max : 0 };
+    return { ...c, raw, max, pts: max ? c.points * Math.pow(raw / max, CURVE) : 0 };
   });
   const total = Math.round(cats.reduce((a, c) => a + c.pts, 0));
   const top = Math.min(99, Math.max(1, Math.round((1 - cdf(total)) * 100)));
@@ -59,9 +65,9 @@ function compute(pts) {
   return { cats, total, top, rank, steps, weakest };
 }
 
-/* ---------- 結果のURL（#r=点数40桁&m=回答者&d=回答日&v=質問の版） ---------- */
+/* ---------- 結果のURL（#r=点数40桁&m=回答者&d=回答日&v=質問の版&n=夫の名前） ---------- */
 function shareUrl(rec) {
-  return `${location.href.split("#")[0]}#r=${encode(rec.pts)}&m=${rec.mode}&d=${rec.d.replaceAll("-", "")}&v=${C.version}`;
+  return `${location.href.split("#")[0]}#r=${encode(rec.pts)}&m=${rec.mode}&d=${rec.d.replaceAll("-", "")}&v=${C.version}${rec.n ? "&n=" + encodeURIComponent(rec.n) : ""}`;
 }
 function setHash(rec) { history.replaceState(null, "", shareUrl(rec)); }
 function clearHash() { if (location.hash) history.replaceState(null, "", location.pathname + location.search); }
@@ -73,7 +79,7 @@ function parseHash() {
   const r = p.get("r"), m = p.get("m"), d = p.get("d") || "";
   if (!new RegExp(`^[0-3]{${Q.length}}$`).test(r) || !MODES[m]) return { error: "broken" };
   const iso = /^\d{8}$/.test(d) ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}` : today();
-  return { rec: { mode: m, pts: decode(r), d: iso } };
+  return { rec: { mode: m, pts: decode(r), d: iso, n: cleanName(p.get("n")) } };
 }
 const HASH_ERRORS = {
   old: "この結果のURLは、質問を変える前の古い版で作られているため表示できません。お手数ですが、もう一度回答してください。",
@@ -84,8 +90,8 @@ const HASH_ERRORS = {
 function partnerOf(mode) {
   const sv = load(), m = other(mode);
   const cands = [
-    sv[m] && { mode: m, pts: decode(sv[m].a), d: sv[m].d, from: "この端末で回答" },
-    sv.got && sv.got[m] && { mode: m, pts: decode(sv.got[m].a), d: sv.got[m].d, from: "受け取ったURL" },
+    sv[m] && { mode: m, pts: decode(sv[m].a), d: sv[m].d, n: sv[m].n, from: "この端末で回答" },
+    sv.got && sv.got[m] && { mode: m, pts: decode(sv.got[m].a), d: sv.got[m].d, n: sv.got[m].n, from: "受け取ったURL" },
   ].filter(x => x && x.pts.length === Q.length && x.pts.every(v => v != null));
   return cands.sort((a, b) => (b.d > a.d ? 1 : b.d < a.d ? -1 : 0))[0] || null;
 }
@@ -116,6 +122,9 @@ function startView() {
  ${st.notice ? `<div class="notice" role="alert">${esc(st.notice)}</div>` : ""}
  <section class="panel">
   <h2>誰が答えますか</h2>
+  <label class="name-field"><span>夫の名前<span class="small muted">（なくてもOK・10文字まで）</span></span>
+   <input id="hname" type="text" maxlength="10" autocomplete="off" enterkeyhint="done" placeholder="例：たかし" value="${esc(sv.name || "")}"></label>
+  <p class="small muted" style="margin-top:-6px">名前は結果と結果のURLに入ります。LINEで送ると、送った相手にも見えます。</p>
   <div class="modes">
    ${["h", "w"].map(m => `<button class="mode" data-act="start" data-mode="${m}">
     <strong>${m === "h" ? "夫が自分で答える" : "妻が夫について答える"}</strong>
@@ -127,7 +136,7 @@ function startView() {
    ${draft ? `<button class="link" data-act="clear-draft">途中の回答を消す</button>` : ""}</div>
  </section>
  ${hist.length ? `<section class="panel"><h3>前回の結果</h3><div class="history">
-  ${hist.map(x => `<button data-act="open" data-slot="${x.key}"><span>${x.label}<span class="small muted">（${fmtDate(x.rec.d)}・${x.tag}）</span></span><strong>${compute(decode(x.rec.a)).total}点</strong></button>`).join("")}
+  ${hist.map(x => `<button data-act="open" data-slot="${x.key}"><span>${x.rec.n ? esc(x.rec.n) + "さん・" : ""}${x.label}<span class="small muted">（${fmtDate(x.rec.d)}・${x.tag}）</span></span><strong>${compute(decode(x.rec.a)).total}点</strong></button>`).join("")}
  </div></section>` : ""}
  <section class="panel">
   <h3>採点する${CATS.length}つの観点</h3>
@@ -167,9 +176,9 @@ function qView() {
   return `${top}
  <div class="quiz-body enter">
   <span class="label">観点 ${ci + 1}/${CATS.length}　${esc(c.name)}</span>
-  <h2 class="q-text" id="qtext" tabindex="-1"><span class="q-no">Q${i + 1}</span>${esc(fmt(q.text, m))}</h2>
+  <h2 class="q-text" id="qtext" tabindex="-1"><span class="q-no">Q${i + 1}</span>${esc(fmt(q.text, m, st.name))}</h2>
   <div class="choices" role="group" aria-labelledby="qtext">
-   ${q.choices.map((o, k) => `<button type="button" class="choice${cur === 3 - k ? " is-on" : ""}" aria-pressed="${cur === 3 - k}" data-act="pick" data-k="${k}"><span class="key">${k + 1}</span><span>${esc(fmt(o, m))}</span></button>`).join("")}
+   ${q.choices.map((o, k) => `<button type="button" class="choice${cur === 3 - k ? " is-on" : ""}" aria-pressed="${cur === 3 - k}" data-act="pick" data-k="${k}"><span class="key">${k + 1}</span><span>${esc(fmt(o, m, st.name))}</span></button>`).join("")}
   </div>
  </div>
  <div class="quiz-foot"><span class="hint">選ぶと次へ進みます</span>
@@ -255,13 +264,13 @@ function resultView() {
    <div class="row"><button class="btn" data-act="start" data-mode="${o}">${MODES[o].who}として答えて比べる</button></div>`}
   </div>` : ""}
  <section class="panel hero">
-  <div class="card-head"><div><span class="label">${st.src === "sample" ? "サンプル回答（例）" : "採点結果"}</span><h2>${esc(C.appName)}</h2></div>
+  <div class="card-head"><div><span class="label">${st.src === "sample" ? "サンプル回答（例）" : "採点結果"}</span><h2>${esc(titleOf(rec.n))}</h2></div>
    <div class="small muted" style="text-align:right">回答者：${MODES[m].label}<br>${fmtDate(rec.d)}</div></div>
   <div class="hero-main"><div class="score">${res.total}<small> / 100点</small></div>
    <div class="stamp" aria-label="評価 ${esc(R0.mark)}">${esc(R0.mark)}</div></div>
   <div><p class="rank-title">${esc(R0.title)}</p><p class="small muted">${esc(R0.msg)}</p></div>
   <p class="pct-line">上位 約<span class="num">${res.top}</span>%・下位 約<span class="num">${100 - res.top}</span>%<span class="small muted">（目安）</span></p>
-  <p class="note">上位・下位％は、全国の夫の点数分布のデータがないため、平均50点・標準偏差（点数のばらつきの幅）15点の分布を仮に置いて計算した目安です。</p>
+  <p class="note">上位・下位％は、全国の夫の点数分布のデータがないため、平均${DIST.mean}点・標準偏差（点数のばらつきの幅）${DIST.sd}点の分布を仮に置いて計算した目安です。</p>
   ${st.src === "sample" ? "" : shareView(rec, res)}
   <details class="more"><summary>分布のグラフとランクの基準を見る</summary>${curveSVG(res.total)}<p class="small muted">評価：${rankRule}</p></details>
  </section>
@@ -292,7 +301,7 @@ function resultView() {
 function summary(rec, res) {
   const top2 = res.steps.slice(0, 2);
   return [
-    `${C.appName}の結果です（回答：${MODES[rec.mode].label}・${fmtDate(rec.d)}）`,
+    `${titleOf(rec.n)}の結果です（回答：${MODES[rec.mode].label}・${fmtDate(rec.d)}）`,
     `合計 ${res.total}点（${res.rank.mark}・${res.rank.title}）`,
     `上位 約${res.top}%（仮の分布で計算した目安）`,
     "",
@@ -312,8 +321,11 @@ function startQuiz(mode) {
   const sv = load(), dr = sv.draft;
   const pts = dr && dr.mode === mode && dr.a.length === Q.length ? decode(dr.a) : Array(Q.length).fill(null);
   const first = pts.indexOf(null);
+  // この端末に名前がなければ、表示中の結果（受け取ったURL）の名前を引き継ぐ
+  const name = cleanName(sv.name) || cleanName(st.view === "result" && st.rec ? st.rec.n : "");
+  if (name && !sv.name) { sv.name = name; save(sv); }
   clearHash();
-  go({ view: "q", mode, step: first < 0 ? Q.length - 1 : first, pts });
+  go({ view: "q", mode, step: first < 0 ? Q.length - 1 : first, pts, name });
 }
 
 function pick(k) {
@@ -343,8 +355,8 @@ function forward() {
   }
   const miss = st.pts.indexOf(null);
   if (miss >= 0) { st.step = miss; locked = false; render(); return; }
-  const rec = { mode: st.mode, pts: st.pts, d: today() };
-  const sv = load(); sv[rec.mode] = { a: encode(rec.pts), d: rec.d }; delete sv.draft; save(sv);
+  const rec = { mode: st.mode, pts: st.pts, d: today(), n: st.name || "" };
+  const sv = load(); sv[rec.mode] = { a: encode(rec.pts), d: rec.d, n: rec.n }; delete sv.draft; save(sv);
   setHash(rec);
   go({ view: "result", rec, src: "own" });
 }
@@ -375,7 +387,7 @@ function route() {
   if (h && h.rec) {
     const sv = load(), a = encode(h.rec.pts);
     const own = sv[h.rec.mode] && sv[h.rec.mode].a === a;
-    if (!own) { sv.got = sv.got || {}; sv.got[h.rec.mode] = { a, d: h.rec.d }; save(sv); }
+    if (!own) { sv.got = sv.got || {}; sv.got[h.rec.mode] = { a, d: h.rec.d, n: h.rec.n }; save(sv); }
     go({ view: "result", rec: h.rec, src: own ? "own" : "got" });
   } else if (h && h.error) {
     clearHash();
@@ -393,17 +405,17 @@ document.addEventListener("click", e => {
   else if (act === "sample") { clearHash(); go({ view: "result", rec: { mode: "h", pts: C.sample.slice(), d: today() }, src: "sample" }); }
   else if (act === "open") {
     const sv = load(), slot = b.dataset.slot, isGot = slot.startsWith("got-"), m = slot.slice(-1);
-    const s = isGot ? sv.got[m] : sv[m], rec = { mode: m, pts: decode(s.a), d: s.d };
+    const s = isGot ? sv.got[m] : sv[m], rec = { mode: m, pts: decode(s.a), d: s.d, n: cleanName(s.n) };
     setHash(rec); go({ view: "result", rec, src: isGot ? "got" : "own" });
   }
   else if (act === "clear-draft") { const sv = load(); delete sv.draft; save(sv); render(); }
-  else if (act === "edit") { const rec = st.rec; clearHash(); go({ view: "q", mode: rec.mode, step: 0, pts: rec.pts.slice() }); }
+  else if (act === "edit") { const rec = st.rec; clearHash(); go({ view: "q", mode: rec.mode, step: 0, pts: rec.pts.slice(), name: rec.n || "" }); }
   else if (act === "home") { clearHash(); go({ view: "start" }); }
   else if (act === "copy") copyText(summary(st.rec, compute(st.rec.pts)), "結果をコピーしました。LINEなどに貼り付けて送れます。");
   else if (act === "copy-url") copyText(shareUrl(st.rec), "URLをコピーしました。");
   else if (act === "share") {
     const txt = summary(st.rec, compute(st.rec.pts));
-    navigator.share({ title: C.appName, text: txt }).catch(() => {});
+    navigator.share({ title: titleOf(st.rec.n), text: txt }).catch(() => {});
   }
   else if (act === "skip") endInterlude();
   // 目次：URLの #r= を壊さないよう、リンクではなくスクロールで移動する
@@ -413,7 +425,14 @@ document.addEventListener("click", e => {
   }
 });
 
+// 夫の名前は打つたびにこの端末に保存する（次に開いたときも残る）
+document.addEventListener("input", e => {
+  if (e.target.id !== "hname") return;
+  const sv = load(); sv.name = cleanName(e.target.value); save(sv);
+});
+
 document.addEventListener("keydown", e => {
+  if (e.target.id === "hname" && e.key === "Enter") { e.target.blur(); return; }
   if (st.view !== "q" || e.altKey || e.ctrlKey || e.metaKey) return;
   if (/^[1-4]$/.test(e.key)) { e.preventDefault(); pick(+e.key - 1); }
   else if (e.key === "ArrowLeft") back();
