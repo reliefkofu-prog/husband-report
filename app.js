@@ -240,7 +240,7 @@ function compareView(rec, res, pr) {
    <div class="bars">${bar("夫", r.hv, r.c.points, "var(--accent)")}${bar("妻", r.wv, r.c.points, "var(--stamp)")}</div></li>`).join("")}</ul>
   <div class="cmp-total"><span>合計</span><span>夫 ${h.res.total}点／妻 ${w.res.total}点（差 ${sign(w.res.total - h.res.total)}）</span></div>
   <p class="small muted">差は「妻の回答 − 夫の回答」です。マイナスの観点は、夫の自己評価より妻から見た評価が低いところです。</p>
-  ${big.length ? `<p class="note">ズレが大きいのは「${big.map(b => esc(b.c.short)).join("」「")}」です。ここは「どの作業を、誰が、どのくらいやっているか」を二人で書き出して確かめるのがおすすめです。</p>` : `<p class="note">二人の認識はほぼ同じです。</p>`}
+  ${big.length ? `<p class="note">ズレが大きいのは「${big.map(b => esc(b.c.short)).join("」「")}」です。ここは「どの作業を、誰が、どのくらいやっているか」を二人で書き出してみると、夫が引き受けられることがまた1つ見つかります。</p>` : `<p class="note">二人の認識はほぼ同じです。</p>`}
  </section>`;
 }
 
@@ -285,14 +285,14 @@ function resultView() {
   <p class="small muted">◎ 80%以上　○ 55%以上　△ 35%以上　× 35%未満</p>
  </section>
  <section class="panel" id="sec-steps"><h2>次の一手</h2>
-  <p class="small muted">点数が低かった質問のうち、配点の大きいものから順に並べています。まず1番目だけ、来週から始めてください。</p>
-  ${res.steps.length ? `<ol class="steps">${res.steps.map(s => `<li><span class="tag">${esc(s.cat)}・Q${s.i + 1}</span>${esc(s.adv)}</li>`).join("")}</ol>` : `<p>大きな弱点はありません。今の分担を、3か月に1回二人で見直すことを続けてください。</p>`}
-  <p class="note"><strong>一番伸びしろがある観点：${esc(res.weakest.name)}</strong><br>${esc(res.weakest.advice)}</p>
+  <p class="small muted">点数が低めだった質問から、配点の大きい順に並べています。1つ引き受けるたびに、妻の毎日に少しずつゆとりが生まれます。まずは1番目を来週1回やってみるだけでも、妻にはちゃんと伝わります。</p>
+  ${res.steps.length ? `<ol class="steps">${res.steps.map(s => `<li><span class="tag">${esc(s.cat)}・Q${s.i + 1}</span>${esc(s.adv)}</li>`).join("")}</ol>` : `<p>どの観点も、二人でしっかり分け合えています。3か月に1回、二人で分担を見直す習慣があると、この良い状態がずっと続きます。</p>`}
+  ${res.weakest.pts / res.weakest.points < 0.8 ? `<p class="note"><strong>妻がいちばん喜びそうな観点：${esc(res.weakest.name)}</strong><br>${esc(res.weakest.advice)}</p>` : ""}
  </section>
  ${pr ? compareView(rec, res, pr) : ""}
  <section class="panel" id="sec-next">
   ${pr ? "" : `<h3>次は${MODES[o].who}にも答えてもらう</h3>
-  <p class="small">${o === "w" ? "同じ質問に妻が「夫は〜」の形で答えると、二人の評価のズレが分かります。" : "夫本人にも「あなたは〜」の形で答えてもらうと、二人の評価のズレが分かります。"}同じスマホで続けて答えても、別のスマホで答えて結果のURLをLINEで送ってもらっても比べられます。点数より、ズレが大きい観点を話し合うきっかけにしてください。</p>`}
+  <p class="small">${o === "w" ? "同じ質問に妻が「夫は〜」の形で答えると、二人の評価のズレが分かります。" : "夫本人にも「あなたは〜」の形で答えてもらうと、二人の評価のズレが分かります。"}同じスマホで続けて答えても、別のスマホで答えて結果のURLをLINEで送ってもらっても比べられます。点数そのものより、ズレが大きい観点こそ、二人で話すいちばんのきっかけになります。</p>`}
   <div class="row">
    ${pr ? "" : `<button class="btn" data-act="start" data-mode="${o}">${MODES[o].label}の回答を始める</button>`}
    ${st.src === "own" ? `<button class="btn ghost" data-act="edit">回答を見直す</button>` : ""}
