@@ -44,6 +44,10 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-off
 
 /* start */
 .cover{display:flex;flex-direction:column;gap:16px;padding-block:12px 18px;border-bottom:2px solid var(--ink);position:relative}
+.cover h1{padding-right:72px}
+.cover h1 .nb{display:inline-block}
+@media (max-width:360px){.cover h1{padding-right:0}.cover .cover-stamp{display:none}}
+.cover .lead{font-size:clamp(16px,5.2vw,19px);word-break:auto-phrase;text-wrap:pretty;font-weight:700;line-height:1.6;margin:0}
 .cover .meta{display:flex;gap:8px 18px;flex-wrap:wrap}
 .cover-stamp{position:absolute;right:0;top:4px;width:64px;height:64px;border:3px solid var(--stamp);border-radius:50%;color:var(--stamp);display:grid;place-items:center;font-weight:800;font-size:30px;transform:rotate(-10deg)}
 .name-field{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:14px}

@@ -1,4 +1,4 @@
-/* 夫の通知表：画面の動き・採点・結果のURL共有。文言と配点は questions.js にあります */
+/* あなたはホントにいい夫？（夫の通知表）：画面の動き・採点・結果のURL共有。文言と配点は questions.js にあります */
 (() => {
 "use strict";
 const C = window.REPORT;
@@ -24,7 +24,7 @@ function save(o) { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (
 const other = m => (m === "h" ? "w" : "h");
 // 夫の名前（任意・10文字まで）。妻が答えるときは「夫は」を「◯◯さんは」にする。表示は必ず esc を通す
 const cleanName = s => String(s || "").replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 10);
-const titleOf = n => (n ? `${n}さんの通知表` : C.appName);
+const titleOf = n => (n ? `${n}さんの通知表` : C.resultName || C.appName);
 const fmt = (t, m, n) => t.replaceAll("{s}", m === "w" && n ? `${n}さん` : MODES[m].s).replaceAll("{w}", MODES[m].w);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const r1 = v => Math.round(v * 10) / 10;
@@ -117,9 +117,10 @@ function startView() {
   return `<header class="cover">
   <span class="cover-stamp" aria-hidden="true">優</span>
   <span class="label">家事・育児・お金・会話の${Q.length}問</span>
-  <h1>${esc(C.appName)}</h1>
-  <p>小さな子どもがいる共働き家庭を想定した、夫の採点アプリです。夫が自分で答えても、妻が夫について答えても使えます。採点されるのは夫だけです。</p>
-  <div class="meta small muted"><span>全${Q.length}問・1問ずつ選ぶだけ</span><span>${CATS.length}つの観点・100点満点</span><span>回答は送信せず、この端末と結果のURLの中だけ</span></div>
+  <h1>${(C.appNameWrap || C.appName).split("｜").map(t => `<span class="nb">${esc(t)}</span>`).join("")}</h1>
+  <p class="lead">夫の自己採点と、妻の採点。<br>何点ズレるか、比べてみませんか。</p>
+  <p>${Q.length}問に答えると、夫の点数・偏差値（目安）・次の一手が出ます。夫が自分で答えても、妻が夫について答えても使えます。採点されるのは夫だけです。</p>
+  <div class="meta small muted"><span>小さな子どもがいる共働き家庭向け</span><span>1問ずつ選ぶだけ・100点満点</span><span>回答は送信せず、この端末と結果のURLの中だけ</span></div>
  </header>
  ${st.notice ? `<div class="notice" role="alert">${esc(st.notice)}</div>` : ""}
  <section class="panel">
@@ -303,7 +304,7 @@ function resultView() {
 function summary(rec, res) {
   const top2 = res.steps.slice(0, 2);
   return [
-    `${titleOf(rec.n)}の結果です（回答：${MODES[rec.mode].label}・${fmtDate(rec.d)}）`,
+    `「${C.appName}」${titleOf(rec.n)}の結果です（回答：${MODES[rec.mode].label}・${fmtDate(rec.d)}）`,
     `合計 ${res.total}点（${res.rank.mark}・${res.rank.title}）`,
     `偏差値 ${res.hensa}・上位 約${res.top}%（仮の分布で計算した目安）`,
     "",
@@ -311,7 +312,7 @@ function summary(rec, res) {
     ...res.cats.map(c => `・${c.short} ${r1(c.pts)}/${c.points}`),
     ...(top2.length ? [RULE, "■ 次の一手", RULE, ...top2.map(s => `・${s.adv}`)] : []),
     "",
-    "結果を開く（あなたも答えると、二人の評価を比べられます）",
+    "結果を開く（あなたも答えると、二人の採点が何点ズレるか比べられます）",
     shareUrl(rec),
   ].join("\n");
 }
