@@ -100,6 +100,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-off
 .rank-title{font-size:19px;font-weight:800}
 .pct-line{font-size:14px;font-weight:700}
 .pct-line .num{font-size:18px}
+.pct-line .hensa{font-size:26px;font-weight:800;color:var(--accent)}
 details.more{border-top:1px dashed var(--line);padding-top:10px}
 details.more summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--accent)}
 details.more[open] summary{margin-bottom:8px}

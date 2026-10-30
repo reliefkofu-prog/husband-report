@@ -55,6 +55,8 @@ function compute(pts) {
   });
   const total = Math.round(cats.reduce((a, c) => a + c.pts, 0));
   const top = Math.min(99, Math.max(1, Math.round((1 - cdf(total)) * 100)));
+  // 偏差値（目安）：同じ仮の分布で 50＋10×(点数−平均)÷標準偏差。マイナスにはしない
+  const hensa = Math.max(0, Math.round(50 + 10 * (total - DIST.mean) / DIST.sd));
   const rank = C.ranks.find(r => total >= r.min) || C.ranks[C.ranks.length - 1];
   // 次の一手：0〜1点の質問を「1問あたりの配点 × 失った点」の大きい順に最大5件
   const steps = Q.map((q, i) => {
@@ -62,7 +64,7 @@ function compute(pts) {
     return { i, gap, weight: c.points / (c.max / 3) * gap, cat: c.short, adv: q.advice };
   }).filter(x => x.gap >= 2).sort((a, b) => b.weight - a.weight || a.i - b.i).slice(0, 5);
   const weakest = [...cats].sort((a, b) => a.pts / a.points - b.pts / b.points)[0];
-  return { cats, total, top, rank, steps, weakest };
+  return { cats, total, top, hensa, rank, steps, weakest };
 }
 
 /* ---------- 結果のURL（#r=点数40桁&m=回答者&d=回答日&v=質問の版&n=夫の名前） ---------- */
@@ -141,7 +143,7 @@ function startView() {
  <section class="panel">
   <h3>採点する${CATS.length}つの観点</h3>
   <ul class="cats small">${CATS.map(c => `<li><span>${esc(c.name)}</span><span class="num muted">${c.points}点</span></li>`).join("")}</ul>
-  <p class="note">上位・下位％は全国統計ではなく、このアプリ独自の仮の分布で計算した目安です。</p>
+  <p class="note">偏差値と上位・下位％は全国統計ではなく、このアプリ独自の仮の分布で計算した目安です。</p>
  </section>`;
 }
 
@@ -269,8 +271,8 @@ function resultView() {
   <div class="hero-main"><div class="score">${res.total}<small> / 100点</small></div>
    <div class="stamp" aria-label="評価 ${esc(R0.mark)}">${esc(R0.mark)}</div></div>
   <div><p class="rank-title">${esc(R0.title)}</p><p class="small muted">${esc(R0.msg)}</p></div>
-  <p class="pct-line">上位 約<span class="num">${res.top}</span>%・下位 約<span class="num">${100 - res.top}</span>%<span class="small muted">（目安）</span></p>
-  <p class="note">上位・下位％は、全国の夫の点数分布のデータがないため、平均${DIST.mean}点・標準偏差（点数のばらつきの幅）${DIST.sd}点の分布を仮に置いて計算した目安です。</p>
+  <p class="pct-line">偏差値 <span class="num hensa">${res.hensa}</span><span class="small muted">（目安）</span>　<span class="small">上位 約${res.top}%・下位 約${100 - res.top}%</span></p>
+  <p class="note">偏差値と上位・下位％は、全国の夫の点数分布のデータがないため、平均${DIST.mean}点・標準偏差（点数のばらつきの幅）${DIST.sd}点の分布を仮に置いて計算した目安です。</p>
   ${st.src === "sample" ? "" : shareView(rec, res)}
   <details class="more"><summary>分布のグラフとランクの基準を見る</summary>${curveSVG(res.total)}<p class="small muted">評価：${rankRule}</p></details>
  </section>
@@ -303,7 +305,7 @@ function summary(rec, res) {
   return [
     `${titleOf(rec.n)}の結果です（回答：${MODES[rec.mode].label}・${fmtDate(rec.d)}）`,
     `合計 ${res.total}点（${res.rank.mark}・${res.rank.title}）`,
-    `上位 約${res.top}%（仮の分布で計算した目安）`,
+    `偏差値 ${res.hensa}・上位 約${res.top}%（仮の分布で計算した目安）`,
     "",
     RULE, "■ 観点別", RULE,
     ...res.cats.map(c => `・${c.short} ${r1(c.pts)}/${c.points}`),
