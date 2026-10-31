@@ -3,18 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- 外へ通信できるのは Google Fonts だけ、と決めておく（回答はどこにも送らない） -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>あなたはホントにいい夫？｜夫の自己採点と妻の採点を40問で比べる</title>
 <meta name="description" content="家事・育児・段取り・お金・会話の40問で、夫を100点満点で採点します。夫の自己採点と妻の採点が何点ズレるかも比べられます。回答は送信せず、端末と結果のURLの中だけに残ります。">
 <meta name="theme-color" content="#F7F3EA" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1A1816" media="(prefers-color-scheme: dark)">
 
 <!-- OGP（LINE・Xで共有したときの表示）
-     公開URLを変えるとき（独自ドメインにする・Vercel のプロジェクト名を変える）は、下の og:url と og:image の2か所も直す -->
+     公開URLを変えるとき（独自ドメインにする・Vercel のプロジェクト名を変える）は、下の og:url・og:image・canonical の3か所も直す -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="あなたはホントにいい夫？">
 <meta property="og:title" content="あなたはホントにいい夫？｜夫の自己採点と妻の採点を40問で比べる">
 <meta property="og:description" content="家事・育児・段取り・お金・会話の40問で、夫を100点満点で採点。夫の自己採点と妻の採点、何点ズレるか比べてみませんか。">
 <meta property="og:url" content="https://iiotto.vercel.app/">
+<link rel="canonical" href="https://iiotto.vercel.app/">
 <meta property="og:image" content="https://iiotto.vercel.app/ogp.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -23,9 +26,10 @@
 <meta name="twitter:card" content="summary_large_image">
 
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='28' fill='%23fff' stroke='%23C2362B' stroke-width='5'/%3E%3Ctext x='32' y='44' font-size='34' font-weight='700' text-anchor='middle' fill='%23C2362B' font-family='sans-serif'%3E%E5%84%AA%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;800&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
